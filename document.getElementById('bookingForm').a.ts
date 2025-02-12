@@ -1,57 +1,119 @@
-document.getElementById('bookingForm').addEventListener('submit', function (event) {
-  event.preventDefault(); // Prevent form submission
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import axios from "axios";
 
-  // Get form values
-  const fullName = document.getElementById('fullName').value;
-  const email = document.getElementById('email').value;
-  const phone = document.getElementById('phone').value;
-  const date = document.getElementById('date').value;
-  const location = document.getElementById('location').value;
-  const captain = document.getElementById('captain').value;
-  const paymentConfirmation = document.getElementById('paymentConfirmation').value;
+export default function WhatsAppPromo() {
+  const [companyName, setCompanyName] = useState("");
+  const [companyEmail, setCompanyEmail] = useState("");
+  const [companyPhone, setCompanyPhone] = useState("");
+  const [phoneNumbers, setPhoneNumbers] = useState("");
+  const [message, setMessage] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [status, setStatus] = useState("");
 
-  // Validate inputs
-  if (!fullName || !email || !phone || !date || !location || !captain || !paymentConfirmation) {
-    alert('Please fill in all fields and provide the payment transaction ID.');
-    return;
-  }
+  useEffect(() => {
+    setCompanyName(localStorage.getItem("companyName") || "");
+    setCompanyEmail(localStorage.getItem("companyEmail") || "");
+    setCompanyPhone(localStorage.getItem("companyPhone") || "");
+  }, []);
 
-  // Email validation
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(email)) {
-    alert('Please enter a valid email address.');
-    return;
-  }
+  useEffect(() => {
+    localStorage.setItem("companyName", companyName);
+  }, [companyName]);
 
-  // Phone number validation
-  const phonePattern = /^\d{10}$/; // Example: 10 digits
-  if (!phonePattern.test(phone)) {
-    alert('Please enter a valid 10-digit phone number.');
-    return;
-  }
+  useEffect(() => {
+    localStorage.setItem("companyEmail", companyEmail);
+  }, [companyEmail]);
 
-  // Date validation
-  const selectedDate = new Date(date);
-  const currentDate = new Date();
-  if (selectedDate < currentDate) {
-    alert('Please select a future date.');
-    return;
-  }
+  useEffect(() => {
+    localStorage.setItem("companyPhone", companyPhone);
+  }, [companyPhone]);
 
-  // Display confirmation message
-  const confirmationDetails = `
-    <strong>Name:</strong> ${fullName}<br>
-    <strong>Email:</strong> ${email}<br>
-    <strong>Phone:</strong> ${phone}<br>
-    <strong>Date:</strong> ${date}<br>
-    <strong>Location:</strong> ${location}<br>
-    <strong>Captain:</strong> ${captain}<br>
-    <strong>Transaction ID:</strong> ${paymentConfirmation}
-  `;
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setImageFile(file);
+  };
 
-  document.getElementById('confirmationDetails').innerHTML = confirmationDetails;
-  document.getElementById('confirmationMessage').classList.remove('hidden');
+  const sendMessages = async () => {
+    try {
+      setStatus("Sending...");
+      const numbersArray = phoneNumbers.split(",").map(num => num.trim());
+      if (numbersArray.length > 1000) {
+        setStatus("Cannot send to more than 1000 clients at once.");
+        return;
+      }
+      const formData = new FormData();
+      formData.append("company", companyName);
+      formData.append("companyEmail", companyEmail);
+      formData.append("companyPhone", companyPhone);
+      formData.append("phones", JSON.stringify(numbersArray));
+      formData.append("message", message);
+      if (imageFile) {
+        formData.append("image", imageFile);
+      } else {
+        formData.append("imageUrl", imageUrl);
+      }
 
-  // Clear form after submission
-  document.getElementById('bookingForm').reset();
-});
+      const response = await axios.post("https://your-whatsapp-api.com/send-bulk", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setStatus(response.data.success ? "Messages sent successfully!" : "Failed to send messages");
+    } catch (error) {
+      setStatus("Error sending messages");
+    }
+  };
+
+  return (
+    <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <Card className="w-96 p-6 shadow-lg">
+        <CardContent>
+          <h2 className="text-xl font-bold mb-4">WhatsApp Bulk Promo Sender</h2>
+          <Input
+            placeholder="Enter company name"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            className="mb-3"
+          />
+          <Input
+            placeholder="Enter company email"
+            value={companyEmail}
+            onChange={(e) => setCompanyEmail(e.target.value)}
+            className="mb-3"
+          />
+          <Input
+            placeholder="Enter company phone number"
+            value={companyPhone}
+            onChange={(e) => setCompanyPhone(e.target.value)}
+            className="mb-3"
+          />
+          <Input
+            placeholder="Enter phone numbers (comma separated)"
+            value={phoneNumbers}
+            onChange={(e) => setPhoneNumbers(e.target.value)}
+            className="mb-3"
+          />
+          <Input
+            placeholder="Enter your message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="mb-3"
+          />
+          <Input
+            placeholder="Enter image URL"
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            className="mb-3"
+          />
+          <input type="file" accept="image/*" onChange={handleImageUpload} className="mb-3" />
+          <Button onClick={sendMessages} className="w-full">Send</Button>
+          {status && <p className="mt-2 text-center text-sm text-gray-600">{status}</p>}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+``` ▋
